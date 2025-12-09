@@ -222,6 +222,20 @@ class SAP_Database {
     }
 
     /**
+     * Update audit
+     */
+    public static function update_audit($audit_id, $data) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'sap_audits';
+
+        return $wpdb->update(
+            $table,
+            $data,
+            ['id' => $audit_id]
+        );
+    }
+
+    /**
      * Insert new issue
      */
     public static function insert_issue($data) {
