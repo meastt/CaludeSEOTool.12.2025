@@ -294,6 +294,763 @@ public static function create_tables() {
 }
 ```
 
+PHASE 2.5: AI INTELLIGENCE & CONTEXT SYSTEM
+The Problem You Identified
+Current plan = AI as dumb content generator
+What we need = AI as your SEO strategist who understands your niche
+
+NEW ARCHITECTURE: NICHE INTELLIGENCE SYSTEM
+1. Site Profiling Engine (class-site-profiler.php)
+This runs FIRST before any fixes
+phpclass SAP_Site_Profiler {
+    
+    private $ai_analyzer;
+    private $profile_data;
+    
+    public function __construct() {
+        $this->ai_analyzer = new SAP_AI_Analyzer();
+    }
+    
+    /**
+     * Build comprehensive site profile
+     * This happens once during setup, then updates monthly
+     */
+    public function build_site_profile() {
+        $profile = [
+            'niche' => $this->detect_niche(),
+            'target_audience' => $this->analyze_target_audience(),
+            'content_strategy' => $this->analyze_content_strategy(),
+            'top_performing_content' => $this->get_top_performers(),
+            'writing_style' => $this->extract_writing_style(),
+            'keyword_universe' => $this->build_keyword_universe(),
+            'competitors' => $this->identify_competitors(),
+            'monetization_model' => $this->detect_monetization_model()
+        ];
+        
+        // Save to database
+        update_option('sap_site_profile', $profile);
+        update_option('sap_site_profile_updated', current_time('mysql'));
+        
+        return $profile;
+    }
+    
+    /**
+     * Detect site niche using AI + content analysis
+     */
+    private function detect_niche() {
+        // Get all posts
+        $posts = get_posts([
+            'numberposts' => 50,
+            'post_type' => 'post',
+            'orderby' => 'rand'
+        ]);
+        
+        $titles = [];
+        $categories = [];
+        $content_samples = [];
+        
+        foreach ($posts as $post) {
+            $titles[] = $post->post_title;
+            $categories = array_merge($categories, wp_get_post_categories($post->ID, ['fields' => 'names']));
+            $content_samples[] = wp_trim_words(wp_strip_all_tags($post->post_content), 100);
+        }
+        
+        // Use Claude to deeply analyze niche
+        $prompt = "Analyze this website and provide a comprehensive niche profile:\n\n";
+        $prompt .= "Site URL: " . get_site_url() . "\n";
+        $prompt .= "Site Name: " . get_bloginfo('name') . "\n";
+        $prompt .= "Description: " . get_bloginfo('description') . "\n\n";
+        $prompt .= "Sample Post Titles:\n" . implode("\n", array_slice($titles, 0, 20)) . "\n\n";
+        $prompt .= "Categories: " . implode(", ", array_unique($categories)) . "\n\n";
+        $prompt .= "Content Samples:\n" . implode("\n\n---\n\n", array_slice($content_samples, 0, 5)) . "\n\n";
+        $prompt .= "Return detailed JSON with:\n";
+        $prompt .= "{\n";
+        $prompt .= '  "primary_niche": "specific niche",'."\n";
+        $prompt .= '  "sub_niches": ["sub1", "sub2"],'."\n";
+        $prompt .= '  "content_pillars": ["pillar1", "pillar2"],'."\n";
+        $prompt .= '  "audience_description": "who this site serves",'."\n";
+        $prompt .= '  "content_approach": "informational/commercial/review-based/etc",'."\n";
+        $prompt .= '  "expertise_level": "beginner/intermediate/expert",'."\n";
+        $prompt .= '  "tone": "professional/casual/technical/friendly",'."\n";
+        $prompt .= '  "key_topics": ["topic1", "topic2"],'."\n";
+        $prompt .= '  "content_gaps": ["potential topics not covered"]'."\n";
+        $prompt .= "}";
+        
+        $response = $this->ai_analyzer->call_claude($prompt, 3000);
+        
+        return json_decode($response, true);
+    }
+    
+    /**
+     * Analyze target audience using GSC data + AI
+     */
+    private function analyze_target_audience() {
+        $gsc = new SAP_GSC_Connector();
+        $search_data = $gsc->get_crawl_errors(date('Y-m-d', strtotime('-90 days')), date('Y-m-d'));
+        
+        // Extract search queries
+        $queries = [];
+        if (isset($search_data['rows'])) {
+            foreach ($search_data['rows'] as $row) {
+                $queries[] = $row['keys'][0];
+            }
+        }
+        
+        $prompt = "Based on these search queries people use to find this site, describe the target audience:\n\n";
+        $prompt .= implode("\n", array_slice($queries, 0, 100)) . "\n\n";
+        $prompt .= "Return JSON:\n";
+        $prompt .= "{\n";
+        $prompt .= '  "primary_audience": "description",'."\n";
+        $prompt .= '  "pain_points": ["pain1", "pain2"],'."\n";
+        $prompt .= '  "search_intent": "informational/commercial/navigational",'."\n";
+        $prompt .= '  "expertise_level_seeking": "beginner/intermediate/expert",'."\n";
+        $prompt .= '  "demographics": "best guess based on queries"'."\n";
+        $prompt .= "}";
+        
+        $response = $this->ai_analyzer->call_claude($prompt, 2000);
+        
+        return json_decode($response, true);
+    }
+    
+    /**
+     * Extract writing style from top-performing content
+     */
+    private function extract_writing_style() {
+        // Get top 10 posts by traffic (from GSC or Analytics)
+        $top_posts = $this->get_top_performers();
+        
+        $content_samples = [];
+        foreach ($top_posts as $post_id) {
+            $post = get_post($post_id);
+            $content_samples[] = wp_trim_words(wp_strip_all_tags($post->post_content), 200);
+        }
+        
+        $prompt = "Analyze these top-performing articles and extract the writing style guide:\n\n";
+        $prompt .= implode("\n\n---\n\n", $content_samples) . "\n\n";
+        $prompt .= "Return JSON style guide:\n";
+        $prompt .= "{\n";
+        $prompt .= '  "tone": "description",'."\n";
+        $prompt .= '  "voice": "first person/third person/etc",'."\n";
+        $prompt .= '  "sentence_structure": "short/long/varied",'."\n";
+        $prompt .= '  "paragraph_length": "average",'."\n";
+        $prompt .= '  "use_of_examples": "heavy/moderate/light",'."\n";
+        $prompt .= '  "technical_depth": "description",'."\n";
+        $prompt .= '  "call_to_actions": "present/absent/style",'."\n";
+        $prompt .= '  "common_phrases": ["phrase1", "phrase2"],'."\n";
+        $prompt .= '  "formatting_patterns": "uses lists/bold/headers/etc"'."\n";
+        $prompt .= "}";
+        
+        $response = $this->ai_analyzer->call_claude($prompt, 2500);
+        
+        return json_decode($response, true);
+    }
+    
+    /**
+     * Build keyword universe for the niche
+     */
+    private function build_keyword_universe() {
+        $niche = $this->detect_niche();
+        
+        // Use Gemini for broader keyword research (cheaper for bulk)
+        $prompt = "For a website in the '{$niche['primary_niche']}' niche, generate a comprehensive keyword universe of 100+ keywords across:\n";
+        $prompt .= "- Head terms (high volume)\n";
+        $prompt .= "- Long-tail keywords\n";
+        $prompt .= "- Question-based keywords\n";
+        $prompt .= "- Commercial intent keywords\n";
+        $prompt .= "- Informational keywords\n\n";
+        $prompt .= "Return as JSON array grouped by category.";
+        
+        $response = $this->ai_analyzer->call_gemini($prompt, 3000);
+        
+        return json_decode($response, true);
+    }
+    
+    /**
+     * Identify top competitors
+     */
+    private function identify_competitors() {
+        $gsc = new SAP_GSC_Connector();
+        $backlink = new SAP_Backlink_Connector();
+        
+        // Get top ranking keywords from GSC
+        $search_data = $gsc->get_crawl_errors(date('Y-m-d', strtotime('-30 days')), date('Y-m-d'));
+        
+        $top_keywords = [];
+        if (isset($search_data['rows'])) {
+            foreach (array_slice($search_data['rows'], 0, 20) as $row) {
+                $top_keywords[] = $row['keys'][0];
+            }
+        }
+        
+        // Research competitors using Claude + web search
+        $prompt = "I need to identify the top 10 competitors for a site in this niche:\n\n";
+        $prompt .= "Site: " . get_site_url() . "\n";
+        $prompt .= "Top keywords we rank for: " . implode(", ", $top_keywords) . "\n\n";
+        $prompt .= "Search the web and identify direct competitors. Return JSON:\n";
+        $prompt .= "{\n";
+        $prompt .= '  "competitors": ['."\n";
+        $prompt .= '    {"domain": "example.com", "strength": "stronger/similar/weaker", "focus": "what they do well"}'."\n";
+        $prompt .= '  ]'."\n";
+        $prompt .= "}";
+        
+        // This would use web_search tool
+        $response = $this->ai_analyzer->call_claude_with_search($prompt, 3000);
+        
+        return json_decode($response, true);
+    }
+    
+    private function get_top_performers() {
+        // Placeholder - would integrate with Analytics or GSC
+        $posts = get_posts([
+            'numberposts' => 10,
+            'orderby' => 'comment_count',
+            'post_type' => 'post'
+        ]);
+        
+        return wp_list_pluck($posts, 'ID');
+    }
+    
+    private function detect_monetization_model() {
+        // Scan for ad codes, affiliate links, product pages
+        $has_adsense = strpos(file_get_contents(get_template_directory() . '/header.php'), 'googlesyndication') !== false;
+        $has_amazon = strpos(file_get_contents(get_template_directory() . '/header.php'), 'amazon') !== false;
+        
+        return [
+            'display_ads' => $has_adsense,
+            'affiliate' => $has_amazon,
+            'products' => post_type_exists('product') // WooCommerce
+        ];
+    }
+}
+
+2. CONTEXT-AWARE CONTENT GENERATOR (UPDATED)
+Every AI call now gets rich context
+phpclass SAP_Context_Aware_Generator {
+    
+    private $site_profile;
+    private $ai_analyzer;
+    
+    public function __construct() {
+        $this->site_profile = get_option('sap_site_profile');
+        $this->ai_analyzer = new SAP_AI_Analyzer();
+    }
+    
+    /**
+     * Generate meta description with full context
+     */
+    public function generate_meta_description($post_id) {
+        $post = get_post($post_id);
+        
+        // Build rich context
+        $context = $this->build_content_context($post_id);
+        
+        $prompt = "You are an SEO expert for a {$this->site_profile['niche']['primary_niche']} website.\n\n";
+        $prompt .= "SITE CONTEXT:\n";
+        $prompt .= "- Audience: {$this->site_profile['target_audience']['primary_audience']}\n";
+        $prompt .= "- Tone: {$this->site_profile['writing_style']['tone']}\n";
+        $prompt .= "- Content Approach: {$this->site_profile['niche']['content_approach']}\n\n";
+        $prompt .= "ARTICLE CONTEXT:\n";
+        $prompt .= "- Title: {$post->post_title}\n";
+        $prompt .= "- Category: {$context['category']}\n";
+        $prompt .= "- Related Topics: " . implode(", ", $context['related_topics']) . "\n";
+        $prompt .= "- Primary Keywords: " . implode(", ", $context['keywords']) . "\n";
+        $prompt .= "- Content Summary: {$context['summary']}\n\n";
+        $prompt .= "Write a compelling 150-160 character meta description that:\n";
+        $prompt .= "1. Matches our site's tone and audience\n";
+        $prompt .= "2. Includes primary keyword naturally\n";
+        $prompt .= "3. Addresses user search intent\n";
+        $prompt .= "4. Encourages clicks\n\n";
+        $prompt .= "Return ONLY the meta description.";
+        
+        return $this->ai_analyzer->call_claude($prompt, 300);
+    }
+    
+    /**
+     * Generate alt text with image research
+     */
+    public function generate_alt_text($image_url, $post_id) {
+        $post = get_post($post_id);
+        $context = $this->build_content_context($post_id);
+        
+        $prompt = "You're writing alt text for a {$this->site_profile['niche']['primary_niche']} website.\n\n";
+        $prompt .= "ARTICLE: {$post->post_title}\n";
+        $prompt .= "TOPIC: {$context['category']}\n";
+        $prompt .= "IMAGE: [I'll describe it]\n\n";
+        $prompt .= "Write 10-15 word alt text that:\n";
+        $prompt .= "1. Describes the image specifically\n";
+        $prompt .= "2. Relates to the article topic\n";
+        $prompt .= "3. Includes relevant keywords naturally\n";
+        $prompt .= "4. Helps visually impaired users\n\n";
+        $prompt .= "Return ONLY the alt text.";
+        
+        // Use Gemini Vision for image + Claude for final alt text
+        $image_description = $this->ai_analyzer->describe_image_gemini($image_url);
+        $final_prompt = $prompt . "\n\nIMAGE DESCRIPTION: $image_description";
+        
+        return $this->ai_analyzer->call_claude($final_prompt, 200);
+    }
+    
+    /**
+     * Expand thin content with research
+     */
+    public function expand_thin_content($post_id, $target_word_count = 800) {
+        $post = get_post($post_id);
+        $context = $this->build_content_context($post_id);
+        
+        // FIRST: Research the topic
+        $research = $this->research_topic($post->post_title, $context);
+        
+        $prompt = "You are a content writer for {$this->site_profile['niche']['primary_niche']}.\n\n";
+        $prompt .= "BRAND VOICE:\n";
+        $prompt .= json_encode($this->site_profile['writing_style'], JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "TARGET AUDIENCE:\n";
+        $prompt .= json_encode($this->site_profile['target_audience'], JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "CURRENT ARTICLE:\n";
+        $prompt .= "Title: {$post->post_title}\n";
+        $prompt .= "Current content:\n{$post->post_content}\n\n";
+        $prompt .= "RESEARCH:\n";
+        $prompt .= "I've researched this topic. Here's what's trending and what competitors cover:\n";
+        $prompt .= json_encode($research, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "TASK:\n";
+        $prompt .= "Expand this article to {$target_word_count} words by adding:\n";
+        $prompt .= "1. Missing information from research\n";
+        $prompt .= "2. Practical examples\n";
+        $prompt .= "3. Data/statistics where relevant\n";
+        $prompt .= "4. FAQ section if helpful\n";
+        $prompt .= "5. Actionable takeaways\n\n";
+        $prompt .= "CRITICAL: Match our existing writing style exactly. Don't sound like AI.\n";
+        $prompt .= "Return expanded HTML content.";
+        
+        return $this->ai_analyzer->call_claude($prompt, 4000);
+    }
+    
+    /**
+     * Research topic before writing
+     */
+    private function research_topic($title, $context) {
+        // Use Claude with web search to research
+        $prompt = "Research this topic: '{$title}'\n\n";
+        $prompt .= "Context: This is for a {$context['category']} article on a {$this->site_profile['niche']['primary_niche']} site.\n\n";
+        $prompt .= "Find:\n";
+        $prompt .= "1. Top 5 ranking articles for this topic (what they cover)\n";
+        $prompt .= "2. Common subtopics/questions\n";
+        $prompt .= "3. Recent statistics/data\n";
+        $prompt .= "4. Trending angles\n";
+        $prompt .= "5. Content gaps (what they miss)\n\n";
+        $prompt .= "Return detailed JSON research brief.";
+        
+        // This uses Claude with web_search tool
+        return $this->ai_analyzer->call_claude_with_search($prompt, 3000);
+    }
+    
+    /**
+     * Build rich context for any piece of content
+     */
+    private function build_content_context($post_id) {
+        $post = get_post($post_id);
+        
+        // Extract keywords using AI
+        $keywords = $this->extract_keywords($post->post_content);
+        
+        // Get category
+        $categories = get_the_category($post_id);
+        $category = $categories ? $categories[0]->name : 'General';
+        
+        // Get related posts
+        $related = get_posts([
+            'category' => $categories[0]->term_id ?? 0,
+            'numberposts' => 5,
+            'exclude' => [$post_id]
+        ]);
+        $related_topics = wp_list_pluck($related, 'post_title');
+        
+        // Summarize content
+        $summary = wp_trim_words(wp_strip_all_tags($post->post_content), 50);
+        
+        return [
+            'keywords' => $keywords,
+            'category' => $category,
+            'related_topics' => $related_topics,
+            'summary' => $summary,
+            'word_count' => str_word_count(wp_strip_all_tags($post->post_content)),
+            'internal_links_count' => substr_count($post->post_content, get_site_url())
+        ];
+    }
+    
+    private function extract_keywords($content) {
+        // Quick keyword extraction using AI
+        $prompt = "Extract 5 primary keywords from this content:\n\n";
+        $prompt .= wp_trim_words(wp_strip_all_tags($content), 200) . "\n\n";
+        $prompt .= "Return JSON array of keywords.";
+        
+        $response = $this->ai_analyzer->call_claude($prompt, 500);
+        return json_decode($response, true);
+    }
+}
+
+3. PM/QA AGENT SYSTEM
+This oversees all fixes and ensures quality
+phpclass SAP_PM_Agent {
+    
+    private $site_profile;
+    private $ai_analyzer;
+    
+    public function __construct() {
+        $this->site_profile = get_option('sap_site_profile');
+        $this->ai_analyzer = new SAP_AI_Analyzer();
+    }
+    
+    /**
+     * Review proposed fix before applying
+     * Acts as quality control
+     */
+    public function review_fix($issue, $proposed_fix) {
+        $prompt = "You are a quality control manager for an SEO agency.\n\n";
+        $prompt .= "CLIENT SITE PROFILE:\n";
+        $prompt .= json_encode($this->site_profile, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "ISSUE:\n";
+        $prompt .= json_encode($issue, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "PROPOSED FIX:\n";
+        $prompt .= json_encode($proposed_fix, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "EVALUATE:\n";
+        $prompt .= "1. Does this fix match the site's brand voice?\n";
+        $prompt .= "2. Is the content quality high enough?\n";
+        $prompt .= "3. Does it serve the target audience?\n";
+        $prompt .= "4. Are there any red flags?\n";
+        $prompt .= "5. Overall approval (approve/revise/reject)\n\n";
+        $prompt .= "Return JSON:\n";
+        $prompt .= "{\n";
+        $prompt .= '  "decision": "approve/revise/reject",'."\n";
+        $prompt .= '  "score": 1-100,'."\n";
+        $prompt .= '  "reasoning": "explanation",'."\n";
+        $prompt .= '  "improvements": ["suggestion1", "suggestion2"],'."\n";
+        $prompt .= '  "risks": ["risk1", "risk2"]'."\n";
+        $prompt .= "}";
+        
+        $review = $this->ai_analyzer->call_claude($prompt, 2000);
+        
+        return json_decode($review, true);
+    }
+    
+    /**
+     * Batch review all pending fixes
+     */
+    public function review_all_fixes($fixes) {
+        $approved = [];
+        $rejected = [];
+        $needs_revision = [];
+        
+        foreach ($fixes as $fix) {
+            $review = $this->review_fix($fix['issue'], $fix['proposed_fix']);
+            
+            if ($review['decision'] === 'approve' && $review['score'] >= 80) {
+                $approved[] = $fix;
+            } elseif ($review['decision'] === 'revise') {
+                $needs_revision[] = [
+                    'fix' => $fix,
+                    'improvements' => $review['improvements']
+                ];
+            } else {
+                $rejected[] = [
+                    'fix' => $fix,
+                    'reasoning' => $review['reasoning']
+                ];
+            }
+        }
+        
+        return [
+            'approved' => $approved,
+            'needs_revision' => $needs_revision,
+            'rejected' => $rejected
+        ];
+    }
+    
+    /**
+     * Ensure consistency across all fixes
+     */
+    public function ensure_consistency($all_fixes) {
+        $prompt = "You're reviewing SEO fixes for consistency across a website.\n\n";
+        $prompt .= "SITE PROFILE:\n";
+        $prompt .= json_encode($this->site_profile, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "ALL FIXES:\n";
+        $prompt .= json_encode($all_fixes, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "CHECK:\n";
+        $prompt .= "1. Are meta descriptions consistent in tone?\n";
+        $prompt .= "2. Do alt texts follow a pattern?\n";
+        $prompt .= "3. Is keyword usage natural across content?\n";
+        $prompt .= "4. Any conflicting approaches?\n\n";
+        $prompt .= "Return JSON with consistency score and recommendations.";
+        
+        return $this->ai_analyzer->call_claude($prompt, 2500);
+    }
+}
+
+4. UPDATED AUTO-FIXER WITH PM REVIEW
+phpclass SAP_Auto_Fixer {
+    
+    private $ai_analyzer;
+    private $context_generator;
+    private $pm_agent;
+    
+    public function __construct() {
+        $this->ai_analyzer = new SAP_AI_Analyzer();
+        $this->context_generator = new SAP_Context_Aware_Generator();
+        $this->pm_agent = new SAP_PM_Agent();
+    }
+    
+    /**
+     * Execute fixes with PM review
+     */
+    public function execute_fixes($issue_ids) {
+        $proposed_fixes = [];
+        
+        // Step 1: Generate all proposed fixes
+        foreach ($issue_ids as $issue_id) {
+            $issue = $this->get_issue($issue_id);
+            $proposed_fix = $this->generate_fix($issue);
+            
+            $proposed_fixes[] = [
+                'issue_id' => $issue_id,
+                'issue' => $issue,
+                'proposed_fix' => $proposed_fix
+            ];
+        }
+        
+        // Step 2: PM Agent reviews all fixes
+        $review_results = $this->pm_agent->review_all_fixes($proposed_fixes);
+        
+        // Step 3: Handle revisions
+        foreach ($review_results['needs_revision'] as $revision) {
+            $improved_fix = $this->revise_fix(
+                $revision['fix']['proposed_fix'],
+                $revision['improvements']
+            );
+            
+            // Re-review
+            $re_review = $this->pm_agent->review_fix(
+                $revision['fix']['issue'],
+                $improved_fix
+            );
+            
+            if ($re_review['decision'] === 'approve') {
+                $review_results['approved'][] = [
+                    'issue_id' => $revision['fix']['issue_id'],
+                    'proposed_fix' => $improved_fix
+                ];
+            }
+        }
+        
+        // Step 4: Check consistency across all approved fixes
+        $consistency_check = $this->pm_agent->ensure_consistency(
+            $review_results['approved']
+        );
+        
+        // Step 5: Apply only approved fixes
+        $results = [];
+        foreach ($review_results['approved'] as $approved_fix) {
+            $result = $this->apply_fix(
+                $approved_fix['issue_id'],
+                $approved_fix['proposed_fix']
+            );
+            $results[] = $result;
+        }
+        
+        return [
+            'applied' => count($review_results['approved']),
+            'rejected' => count($review_results['rejected']),
+            'consistency_score' => $consistency_check['score'] ?? 100,
+            'results' => $results
+        ];
+    }
+    
+    private function generate_fix($issue) {
+        // Use context-aware generator
+        switch ($issue->issue_type) {
+            case 'missing_meta_description':
+                return $this->context_generator->generate_meta_description($issue->post_id);
+                
+            case 'thin_content':
+                return $this->context_generator->expand_thin_content($issue->post_id);
+                
+            case 'missing_alt_text':
+                return $this->context_generator->generate_alt_text($issue->url, $issue->post_id);
+                
+            default:
+                return null;
+        }
+    }
+    
+    private function revise_fix($original_fix, $improvements) {
+        $prompt = "Improve this SEO fix based on feedback:\n\n";
+        $prompt .= "ORIGINAL:\n{$original_fix}\n\n";
+        $prompt .= "IMPROVEMENTS NEEDED:\n" . implode("\n", $improvements) . "\n\n";
+        $prompt .= "Return improved version.";
+        
+        return $this->ai_analyzer->call_claude($prompt, 1000);
+    }
+}
+
+5. COMPETITOR INTELLIGENCE MODULE
+phpclass SAP_Competitor_Intelligence {
+    
+    private $ai_analyzer;
+    
+    public function __construct() {
+        $this->ai_analyzer = new SAP_AI_Analyzer();
+    }
+    
+    /**
+     * Analyze competitor for specific topic
+     */
+    public function analyze_competitor_content($topic, $competitor_url) {
+        $prompt = "Analyze this competitor article:\n\n";
+        $prompt .= "URL: {$competitor_url}\n";
+        $prompt .= "Topic: {$topic}\n\n";
+        $prompt .= "Search and analyze their content. Return JSON:\n";
+        $prompt .= "{\n";
+        $prompt .= '  "word_count": number,'."\n";
+        $prompt .= '  "subtopics_covered": ["topic1", "topic2"],'."\n";
+        $prompt .= '  "content_depth": "shallow/moderate/deep",'."\n";
+        $prompt .= '  "unique_angles": ["angle1", "angle2"],'."\n";
+        $prompt .= '  "what_they_miss": ["gap1", "gap2"],'."\n";
+        $prompt .= '  "estimated_quality_score": 1-100'."\n";
+        $prompt .= "}";
+        
+        // Uses web_search + web_fetch
+        return $this->ai_analyzer->call_claude_with_search($prompt, 3000);
+    }
+    
+    /**
+     * Get content recommendations based on competitors
+     */
+    public function get_content_recommendations($post_id) {
+        $post = get_post($post_id);
+        $site_profile = get_option('sap_site_profile');
+        $competitors = $site_profile['competitors']['competitors'] ?? [];
+        
+        // Analyze top 3 competitors for this topic
+        $competitor_analysis = [];
+        foreach (array_slice($competitors, 0, 3) as $competitor) {
+            $analysis = $this->analyze_competitor_content(
+                $post->post_title,
+                $competitor['domain']
+            );
+            $competitor_analysis[] = $analysis;
+        }
+        
+        // Generate recommendations
+        $prompt = "Based on competitor analysis, recommend improvements:\n\n";
+        $prompt .= "OUR ARTICLE:\n";
+        $prompt .= "Title: {$post->post_title}\n";
+        $prompt .= "Word Count: " . str_word_count(wp_strip_all_tags($post->post_content)) . "\n\n";
+        $prompt .= "COMPETITOR ANALYSIS:\n";
+        $prompt .= json_encode($competitor_analysis, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "Recommend:\n";
+        $prompt .= "1. Topics to add\n";
+        $prompt .= "2. Target word count\n";
+        $prompt .= "3. Unique angles to take\n";
+        $prompt .= "4. Content structure improvements\n\n";
+        $prompt .= "Return detailed JSON recommendations.";
+        
+        return $this->ai_analyzer->call_claude($prompt, 2500);
+    }
+}
+
+INTEGRATION INTO MAIN FLOW
+Updated Admin Settings Page
+Add new section:
+php<h2>AI Intelligence Settings</h2>
+
+<table class="form-table">
+    <tr>
+        <th scope="row">Site Profile</th>
+        <td>
+            <?php 
+            $profile = get_option('sap_site_profile');
+            if ($profile): 
+            ?>
+                <p>Niche: <?php echo $profile['niche']['primary_niche']; ?></p>
+                <p>Last Updated: <?php echo get_option('sap_site_profile_updated'); ?></p>
+                <button type="button" class="button" id="rebuild-profile">Rebuild Profile</button>
+            <?php else: ?>
+                <button type="button" class="button button-primary" id="build-profile">Build Initial Profile</button>
+            <?php endif; ?>
+        </td>
+    </tr>
+    
+    <tr>
+        <th scope="row">PM Agent Quality Threshold</th>
+        <td>
+            <input type="number" name="pm_quality_threshold" min="0" max="100" value="80">
+            <p class="description">Minimum quality score for auto-approval (0-100)</p>
+        </td>
+    </tr>
+    
+    <tr>
+        <th scope="row">Content Research</th>
+        <td>
+            <label>
+                <input type="checkbox" name="enable_content_research" value="1" checked>
+                Enable AI research before content generation
+            </label>
+            <p class="description">AI will research topics using web search before writing</p>
+        </td>
+    </tr>
+</table>
+
+THE DIFFERENCE THIS MAKES
+Without this system:
+
+AI generates generic meta description
+Alt text says "person using laptop"
+Expanded content sounds like AI
+
+With this system:
+
+AI knows your site is about "e-bike reviews for outdoor enthusiasts"
+Understands your audience is "30-50 year olds researching their first e-bike purchase"
+Researches competitors before writing
+Matches your casual, technical tone
+Includes data points from research
+PM agent ensures quality before applying
+Every piece of content is strategically aligned
+
+This IS the RankMath/Yoast killer because:
+
+Those plugins just CHECK things - this FIXES them intelligently
+They're rule-based - this is strategically aware
+They don't understand your niche - this does
+They can't write - this writes at agency level
+They don't learn - this profiles and adapts
+
+
+ADDITIONS TO BUILD PLAN
+New files needed:
+
+/modules/intelligence/class-site-profiler.php
+/modules/intelligence/class-context-aware-generator.php
+/modules/intelligence/class-pm-agent.php
+/modules/intelligence/class-competitor-intelligence.php
+
+New database table:
+sqlCREATE TABLE {$prefix}sap_research_cache (
+    id bigint(20) NOT NULL AUTO_INCREMENT,
+    topic varchar(255) NOT NULL,
+    research_data longtext,
+    created_at datetime NOT NULL,
+    expires_at datetime NOT NULL,
+    PRIMARY KEY (id),
+    KEY topic (topic)
+);
+Setup wizard on first activation:
+
+Run site profiler
+Connect APIs
+Set quality thresholds
+Done
+
+This is what makes it actually intelligent.RetryClaude is AI and can make mistakes. Please double-check responses.
+
 ---
 
 ## PHASE 3: API INTEGRATION LAYER
