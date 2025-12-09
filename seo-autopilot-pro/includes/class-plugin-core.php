@@ -78,8 +78,15 @@ class SAP_Plugin_Core {
         require_once $modules_path . 'intelligence/class-pm-agent.php';
         require_once $modules_path . 'intelligence/class-competitor-intelligence.php';
 
+        // AI Search Optimization modules (Phase 2.6)
+        require_once $modules_path . 'intelligence/class-ai-search-optimizer.php';
+        require_once $modules_path . 'intelligence/class-faq-generator.php';
+        require_once $modules_path . 'intelligence/class-direct-answer-optimizer.php';
+        require_once $modules_path . 'intelligence/class-eeat-enhancer.php';
+
         // Fix modules
         require_once $modules_path . 'fixes/class-auto-fixer.php';
+        require_once $modules_path . 'fixes/class-ai-search-fixer.php';
         require_once $modules_path . 'fixes/class-content-fixer.php';
         require_once $modules_path . 'fixes/class-technical-fixer.php';
         require_once $modules_path . 'fixes/class-image-optimizer.php';
